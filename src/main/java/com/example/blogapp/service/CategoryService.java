@@ -1,6 +1,8 @@
 package com.example.blogapp.service;
 
 import com.example.blogapp.dto.CategoryDTO;
+import com.example.blogapp.exceptions.SpringBlogException;
+import com.example.blogapp.mapper.CategoryMapper;
 import com.example.blogapp.model.Category;
 import com.example.blogapp.repository.CategoryRepository;
 import lombok.AllArgsConstructor;
@@ -17,10 +19,11 @@ import java.util.stream.Collectors;
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final CategoryMapper categoryMapper;
 
 //    @Transactional(readOnly = true)
     public CategoryDTO save(CategoryDTO categoryDTO){
-       Category save =  categoryRepository.save(mapDtoToCategory(categoryDTO));
+       Category save =  categoryRepository.save(categoryMapper.mapDtoToCategory(categoryDTO));
         categoryDTO.setId(save.getId());
         return categoryDTO;
     }
@@ -29,21 +32,13 @@ public class CategoryService {
     public List<CategoryDTO> getAll() {
         return categoryRepository.findAll()
                 .stream()
-                .map(this::mapCategoryToDto)
+                .map(categoryMapper::mapCategoryToDto)
                 .collect(Collectors.toList());
     }
 
-    private Category mapDtoToCategory(CategoryDTO categoryDTO) {
-        return Category.builder().name(categoryDTO.getName())
-                .description(categoryDTO.getDescription())
-                .build();
+    public CategoryDTO getCategory(Long id) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(()-> new SpringBlogException("No category found"));
+        return categoryMapper.mapCategoryToDto(category);
     }
-
-    private CategoryDTO mapCategoryToDto(Category category) {
-        return CategoryDTO.builder().name(category.getName())
-                .id(category.getId())
-                .numberOfPosts(category.getPosts().size())
-                .build();
-    }
-
 }

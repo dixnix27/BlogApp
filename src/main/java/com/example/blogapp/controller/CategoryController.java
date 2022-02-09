@@ -13,7 +13,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/category")
 @AllArgsConstructor
-@Slf4j
 public class CategoryController {
 
     private final CategoryService categoryService;
@@ -29,4 +28,11 @@ public class CategoryController {
         return ResponseEntity.status(HttpStatus.OK)
                 .body(categoryService.getAll());
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<CategoryDTO> getCategory(@PathVariable Long id){
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(categoryService.getCategory(id));
+    }
+
 }
