@@ -1,6 +1,7 @@
 package com.example.blogapp.service;
 import com.example.blogapp.dto.AuthenticationResponse;
 import com.example.blogapp.dto.LoginRequest;
+import com.example.blogapp.dto.RefreshTokenRequest;
 import com.example.blogapp.dto.RegisterRequest;
 import com.example.blogapp.exceptions.SpringBlogException;
 import com.example.blogapp.model.NotificationEmail;
@@ -21,6 +22,8 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
+import static java.util.Date.from;
+
 @Service
 @AllArgsConstructor
 @Transactional
@@ -32,6 +35,7 @@ public class AuthService {
     private final MailService mailService;
     private final AuthenticationManager authenticationManager;
     private final JwtProvider jwtProvider;
+    private final RefreshTokenService refreshTokenService;
 
     public void signup(RegisterRequest registerRequest){
         User user = new User();
@@ -39,15 +43,16 @@ public class AuthService {
         user.setEmail(registerRequest.getEmail());
         user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
         user.setCreated(Instant.now());
-        user.setEnabled(false);
+        user.setEnabled(true);
 
         userRepository.save(user);
 
         String token = generateVerificationToken(user);
-        mailService.sendMail(new NotificationEmail("Activate your account!",
-                user.getEmail(),
-                "Thanks for making an account,activate your account here: "+
-                "http://localhost:8080/api/auth/accountVerification/"+token));
+
+//        mailService.sendMail(new NotificationEmail("Activate your account!",
+//                user.getEmail(),
+//                "Thanks for making an account,activate your account here: "+
+//                "http://localhost:8080/api/auth/accountVerification/"+token));
 
     }
 
@@ -84,8 +89,13 @@ public class AuthService {
         Authentication authenticate = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getUsername(),
                 loginRequest.getPassword()));
         SecurityContextHolder.getContext().setAuthentication(authenticate);
-        String authenticationToken = jwtProvider.generateToken(authenticate);
-        return new AuthenticationResponse(authenticationToken, loginRequest.getUsername());
+        String token = jwtProvider.generateToken(authenticate);
+        return AuthenticationResponse.builder()
+                .authenticationToken(token)
+                .refreshToken(refreshTokenService.generateRefreshToken().getToken())
+                .expiresAt(Instant.now().plusMillis(jwtProvider.getJwtExpirationInMillis()))
+                .username(loginRequest.getUsername())
+                .build();
     }
 
     @Transactional(readOnly = true)
@@ -96,4 +106,14 @@ public class AuthService {
                 .orElseThrow(() -> new SpringBlogException("User name not found - " + principal.getUsername()));
     }
 
+    public AuthenticationResponse refreshToken(RefreshTokenRequest refreshTokenRequest) {
+        refreshTokenService.validateRefreshToken(refreshTokenRequest.getRefreshToken());
+        String token = jwtProvider.generateTokenWithUsername(refreshTokenRequest.getUsername());
+        return AuthenticationResponse.builder()
+                .authenticationToken(token)
+                .refreshToken(refreshTokenRequest.getRefreshToken())
+                .expiresAt(Instant.now().plusMillis(jwtProvider.getJwtExpirationInMillis()))
+                .username(refreshTokenRequest.getUsername())
+                .build();
+    }
 }

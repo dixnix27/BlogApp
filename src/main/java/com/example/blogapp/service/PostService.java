@@ -34,11 +34,11 @@ public class PostService {
     public Post save(PostRequest postRequest) {
         Category category = categoryRepository.findByName(postRequest.getCategoryName())
                 .orElseThrow(()-> new SpringBlogException("Category not found"));
-        User currentUser = authService.getCurrentUser();
+//        User currentUser = authService.getCurrentUser();
 
         postRepository.save(postMapper.map(postRequest, category, authService.getCurrentUser()));
 
-       return postMapper.map(postRequest,category,currentUser);
+       return postMapper.map(postRequest,category,authService.getCurrentUser());
     }
 
     @Transactional(readOnly = true)
