@@ -11,6 +11,7 @@ import com.example.blogapp.repository.UserRepository;
 import com.example.blogapp.repository.VerificationTokenRepository;
 import com.example.blogapp.security.JwtProvider;
 import lombok.AllArgsConstructor;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -43,12 +44,12 @@ public class AuthService {
         user.setEmail(registerRequest.getEmail());
         user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
         user.setCreated(Instant.now());
-        user.setEnabled(true);
 
         userRepository.save(user);
 
         String token = generateVerificationToken(user);
 
+        verifyAccount(token);
 //        mailService.sendMail(new NotificationEmail("Activate your account!",
 //                user.getEmail(),
 //                "Thanks for making an account,activate your account here: "+
@@ -115,5 +116,10 @@ public class AuthService {
                 .expiresAt(Instant.now().plusMillis(jwtProvider.getJwtExpirationInMillis()))
                 .username(refreshTokenRequest.getUsername())
                 .build();
+    }
+
+    public boolean isLoggedIn() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return !(authentication instanceof AnonymousAuthenticationToken) && authentication.isAuthenticated();
     }
 }
